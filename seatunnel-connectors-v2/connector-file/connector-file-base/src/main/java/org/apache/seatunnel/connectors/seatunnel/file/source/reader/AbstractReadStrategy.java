@@ -40,12 +40,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -130,7 +125,11 @@ public abstract class AbstractReadStrategy implements ReadStrategy {
         FileStatus[] stats = hdfs.listStatus(listFiles);
         for (FileStatus fileStatus : stats) {
             if (fileStatus.isDirectory()) {
-                fileNames.addAll(getFileNamesByPath(hadoopConf, fileStatus.getPath().toString()));
+                // filter empty directory
+                List<String> namesByPath = getFileNamesByPath(hadoopConf, fileStatus.getPath().toString());
+                if (!namesByPath.isEmpty()) {
+                    fileNames.addAll(namesByPath);
+                }
                 continue;
             }
             if (fileStatus.isFile() && filterFileByPattern(fileStatus)) {
@@ -155,11 +154,8 @@ public abstract class AbstractReadStrategy implements ReadStrategy {
         }
 
         if (fileNames.isEmpty()) {
-            throw new FileConnectorException(
-                    FileConnectorErrorCode.FILE_LIST_EMPTY,
-                    "The target file list is empty,"
-                            + "SeaTunnel will not be able to sync empty table, "
-                            + "please check the configuration parameters such as: [file_filter_pattern]");
+            // return empty list
+            return Collections.emptyList();
         }
 
         return fileNames;
